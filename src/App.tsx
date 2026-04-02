@@ -114,7 +114,7 @@ export default function App() {
           </div>
           <div>
             <span className="hidden md:block font-bold text-xl tracking-tight">SAMP NEXUS</span>
-            <span className="hidden md:block text-[10px] text-brand-primary font-bold">v1.0.5 (SDK Fixed)</span>
+            <span className="hidden md:block text-[10px] text-brand-primary font-bold">v1.0.6 (Java 21 & AGP 8.13 Fixed)</span>
           </div>
         </div>
 

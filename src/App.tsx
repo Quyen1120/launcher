@@ -112,7 +112,10 @@ export default function App() {
           <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center neon-glow">
             <Play className="fill-white text-white w-5 h-5 ml-0.5" />
           </div>
-          <span className="hidden md:block font-bold text-xl tracking-tight">SAMP NEXUS</span>
+          <div>
+            <span className="hidden md:block font-bold text-xl tracking-tight">SAMP NEXUS</span>
+            <span className="hidden md:block text-[10px] text-brand-primary font-bold">v1.0.1 (APK Fixed)</span>
+          </div>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-2">

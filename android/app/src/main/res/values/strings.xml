@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SAMP Nexus</string>
+    <string name="title_activity_main">SAMP Nexus</string>
+    <string name="package_name">com.samp.nexus</string>
+    <string name="custom_url_scheme">com.samp.nexus</string>
+</resources>

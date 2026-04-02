@@ -1,0 +1,5 @@
+{
+  "name": "SAMP Nexus Launcher",
+  "description": "A modern, high-performance web dashboard for San Andreas Multiplayer servers, featuring real-time server tracking and news.",
+  "requestFramePermissions": []
+}

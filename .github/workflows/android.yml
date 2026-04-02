@@ -34,7 +34,9 @@ jobs:
 
       - name: Fix Corrupt Gradle Wrapper
         working-directory: ./android
-        run: gradle wrapper --gradle-version 8.14.3
+        run: |
+          rm -f gradle/wrapper/gradle-wrapper.jar
+          gradle wrapper --gradle-version 8.2.1
 
       - name: Make gradlew executable
         working-directory: ./android

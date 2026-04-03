@@ -1,0 +1,317 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - displayName: string (optional) - User's display name
+    //   - email: string (required) - User's email
+    //   - photoURL: string (optional) - User's photo URL
+    //   - coins: number (required) - LW Coins balance
+    //   - level: number (required) - Launcher level
+    //   - role: string (required) - 'user' or 'admin'
+    //   - discordUsername: string (optional) - Linked Discord username
+    //   - createdAt: timestamp (required) - Creation time
+    //
+    // Collection: news, mods, shop, servers, announcements
+    //   - Publicly readable, admin writable.
+    //
+    // Collection: messages
+    //   - Readable by authenticated users.
+    //   - Writable by authenticated users (own messages).
+    //
+    // Collection: notifications
+    //   - Readable by owner.
+    //   - Writable by admin or system (simulated by owner for now).
+    //
+    // Collection: appConfig
+    //   - Publicly readable, admin writable.
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "tminhquyen41@gmail.com" && request.auth.token.email_verified == true));
+    }
+    
+    function isLeader() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader';
+    }
+
+    function isStaff() {
+      return isAdmin() || isLeader();
+    }
+    
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+    
+    function hasRequiredFields(requiredFields) {
+      return request.resource.data.keys().hasAll(requiredFields);
+    }
+    
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+    
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser() {
+      let data = request.resource.data;
+      let allowedFields = ['uid', 'displayName', 'email', 'photoURL', 'coins', 'level', 'role', 'discordUsername', 'createdAt', 'faction', 'lastLoginDate', 'streak', 'inventory', 'chatColor', 'lastSpinDate'];
+      let requiredFields = ['uid', 'email', 'coins', 'level', 'role', 'createdAt'];
+      
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             data.email is string && isValidEmail(data.email) && data.email.size() < 100 &&
+             data.coins is number && data.coins >= 0 &&
+             data.level is number && data.level >= 1 &&
+             data.role in ['user', 'admin', 'leader'] &&
+             data.createdAt is timestamp &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 50)) &&
+             (!('photoURL' in data) || (data.photoURL is string && isValidUrl(data.photoURL) && data.photoURL.size() <= 500)) &&
+             (!('discordUsername' in data) || data.discordUsername == null || (data.discordUsername is string && data.discordUsername.size() <= 100)) &&
+             (!('faction' in data) || data.faction == null || (data.faction is string && data.faction.size() <= 50)) &&
+             (!('lastLoginDate' in data) || data.lastLoginDate == null || (data.lastLoginDate is string && data.lastLoginDate.size() <= 50)) &&
+             (!('streak' in data) || data.streak == null || (data.streak is number && data.streak >= 0)) &&
+             (!('inventory' in data) || data.inventory is list) &&
+             (!('chatColor' in data) || data.chatColor == null || (data.chatColor is string && data.chatColor.size() <= 50)) &&
+             (!('lastSpinDate' in data) || data.lastSpinDate == null || (data.lastSpinDate is string && data.lastSpinDate.size() <= 50));
+    }
+
+    function isValidNews() {
+      let data = request.resource.data;
+      let allowedFields = ['title', 'summary', 'category', 'image', 'date', 'createdAt'];
+      let requiredFields = ['title', 'summary', 'category', 'date', 'createdAt'];
+      
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.summary is string && data.summary.size() > 0 && data.summary.size() <= 500 &&
+             data.category in ['Update', 'Event', 'Announcement'] &&
+             data.date is string && data.date.size() <= 20 &&
+             data.createdAt is timestamp &&
+             (!('image' in data) || (data.image is string && isValidUrl(data.image) && data.image.size() <= 500));
+    }
+
+    function isValidMod() {
+      let data = request.resource.data;
+      let allowedFields = ['name', 'size', 'desc', 'iconName', 'category', 'createdAt'];
+      let requiredFields = ['name', 'size', 'desc', 'iconName', 'category', 'createdAt'];
+      
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.size is string && data.size.size() > 0 && data.size.size() <= 20 &&
+             data.desc is string && data.desc.size() > 0 && data.desc.size() <= 500 &&
+             data.iconName is string && data.iconName.size() > 0 && data.iconName.size() <= 50 &&
+             data.category in ['Graphics', 'Weapons', 'Vehicles', 'Skins', 'Other'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidShopItem() {
+      let data = request.resource.data;
+      let allowedFields = ['name', 'price', 'desc', 'iconName', 'createdAt'];
+      let requiredFields = ['name', 'price', 'desc', 'iconName', 'createdAt'];
+      
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.price is number && data.price >= 0 &&
+             data.desc is string && data.desc.size() > 0 && data.desc.size() <= 500 &&
+             data.iconName is string && data.iconName.size() > 0 && data.iconName.size() <= 50 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidServer() {
+      let data = request.resource.data;
+      let allowedFields = ['name', 'ip', 'maxPlayers', 'gamemode', 'map', 'version', 'image', 'status', 'createdAt'];
+      let requiredFields = ['name', 'ip', 'maxPlayers', 'gamemode', 'status', 'createdAt'];
+      
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.ip is string && data.ip.size() > 0 && data.ip.size() <= 100 &&
+             data.maxPlayers is number && data.maxPlayers > 0 &&
+             data.gamemode is string && data.gamemode.size() > 0 && data.gamemode.size() <= 50 &&
+             data.status in ['online', 'offline', 'maintenance'] &&
+             data.createdAt is timestamp &&
+             (!('map' in data) || (data.map is string && data.map.size() <= 50)) &&
+             (!('version' in data) || (data.version is string && data.version.size() <= 50)) &&
+             (!('image' in data) || (data.image is string && isValidUrl(data.image) && data.image.size() <= 500));
+    }
+
+    function isValidMessage() {
+      let data = request.resource.data;
+      let allowedFields = ['text', 'uid', 'displayName', 'photoURL', 'role', 'faction', 'channel', 'chatColor', 'createdAt'];
+      let requiredFields = ['text', 'uid', 'displayName', 'channel', 'createdAt'];
+      
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 500 &&
+             data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() <= 50 &&
+             data.channel is string && data.channel.size() > 0 && data.channel.size() <= 50 &&
+             data.createdAt is timestamp &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+             (!('role' in data) || (data.role is string && data.role.size() <= 50)) &&
+             (!('faction' in data) || (data.faction is string && data.faction.size() <= 50)) &&
+             (!('chatColor' in data) || (data.chatColor is string && data.chatColor.size() <= 50));
+    }
+
+    function isValidNotification() {
+      let data = request.resource.data;
+      let allowedFields = ['uid', 'title', 'body', 'read', 'createdAt'];
+      let requiredFields = ['uid', 'title', 'body', 'read', 'createdAt'];
+      
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() <= 100 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.body is string && data.body.size() > 0 && data.body.size() <= 500 &&
+             data.read is bool &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidAppConfig() {
+      let data = request.resource.data;
+      let allowedFields = ['latestVersion', 'updateUrl', 'maintenanceMode'];
+      let requiredFields = ['latestVersion'];
+      
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.latestVersion is string && data.latestVersion.size() > 0 && data.latestVersion.size() <= 50 &&
+             (!('updateUrl' in data) || (data.updateUrl is string && isValidUrl(data.updateUrl) && data.updateUrl.size() <= 500)) &&
+             (!('maintenanceMode' in data) || data.maintenanceMode is bool);
+    }
+
+    function isValidAnnouncement() {
+      let data = request.resource.data;
+      let allowedFields = ['title', 'content', 'author', 'createdAt'];
+      let requiredFields = ['title', 'content', 'author', 'createdAt'];
+      
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 2000 &&
+             data.author is string && data.author.size() > 0 && data.author.size() <= 50 &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Allow user to create their own profile, but role must be 'user' unless admin
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser() &&
+                    (request.resource.data.role == 'user' || isAdmin()) &&
+                    (request.resource.data.coins == 0 || isAdmin()) &&
+                    (request.resource.data.level == 1 || isAdmin()) &&
+                    request.resource.data.uid == userId;
+                    
+      // Allow user to update their own profile, but cannot change role, coins, level unless admin
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser() &&
+                    request.resource.data.uid == resource.data.uid &&
+                    request.resource.data.createdAt == resource.data.createdAt &&
+                    ((request.resource.data.role == resource.data.role &&
+                      request.resource.data.coins == resource.data.coins &&
+                      request.resource.data.level == resource.data.level) || isAdmin());
+                      
+      allow delete: if isAdmin();
+    }
+
+    match /news/{newsId} {
+      allow read: if true;
+      allow create, update: if isStaff() && isValidNews();
+      allow delete: if isStaff();
+    }
+
+    match /mods/{modId} {
+      allow read: if true;
+      allow create, update: if isStaff() && isValidMod();
+      allow delete: if isStaff();
+    }
+
+    match /shop/{itemId} {
+      allow read: if true;
+      allow create, update: if isStaff() && isValidShopItem();
+      allow delete: if isStaff();
+    }
+
+    match /servers/{serverId} {
+      allow read: if true;
+      allow create, update: if isStaff() && isValidServer();
+      allow delete: if isStaff();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow create, update: if isStaff() && isValidAnnouncement();
+      allow delete: if isStaff();
+    }
+
+    match /messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidMessage();
+      allow delete: if isStaff() || isOwner(resource.data.uid);
+      allow update: if false; // Messages cannot be edited
+    }
+
+    match /voiceRooms/{roomId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isStaff() || isOwner(resource.data.participants[0]);
+    }
+
+    match /factions/{factionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isStaff() || isOwner(resource.data.leaderId);
+    }
+
+    match /appConfig/{configId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidAppConfig();
+      allow delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && isValidNotification(); // Allow system/users to create
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && isValidNotification(); // Mark as read
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+  }
+}

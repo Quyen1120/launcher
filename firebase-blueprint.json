@@ -1,0 +1,160 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile data for the launcher",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string", "description": "User's display name" },
+        "email": { "type": "string", "format": "email" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "coins": { "type": "number", "description": "LW Coins balance" },
+        "level": { "type": "number", "description": "Launcher level" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "User role" },
+        "faction": { "type": "string", "description": "In-game faction (e.g., LSPD, EMS)" },
+        "discordUsername": { "type": "string", "description": "Linked Discord username" },
+        "lastLoginDate": { "type": "string", "description": "Date string for daily rewards" },
+        "streak": { "type": "number", "description": "Daily login streak" },
+        "inventory": { "type": "array", "items": { "type": "string" }, "description": "Owned item IDs" },
+        "chatColor": { "type": "string", "description": "Equipped chat color" },
+        "lastSpinDate": { "type": "string", "description": "Last lucky wheel spin date" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "coins", "level", "createdAt"]
+    },
+    "News": {
+      "title": "News Article",
+      "description": "News and updates for the launcher",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "category": { "type": "string", "enum": ["Update", "Event", "Announcement"] },
+        "image": { "type": "string", "format": "uri" },
+        "date": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "summary", "category", "date", "createdAt"]
+    },
+    "Mod": {
+      "title": "Game Mod",
+      "description": "Downloadable game modification",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "size": { "type": "string" },
+        "desc": { "type": "string" },
+        "iconName": { "type": "string" },
+        "category": { "type": "string", "enum": ["Graphics", "Weapons", "Vehicles", "Skins", "Other"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "size", "desc", "iconName", "category", "createdAt"]
+    },
+    "ShopItem": {
+      "title": "Shop Item",
+      "description": "Item available in the store",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "desc": { "type": "string" },
+        "iconName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "desc", "iconName", "createdAt"]
+    },
+    "Server": {
+      "title": "Game Server",
+      "description": "Server listing",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "ip": { "type": "string" },
+        "maxPlayers": { "type": "number" },
+        "gamemode": { "type": "string" },
+        "map": { "type": "string" },
+        "version": { "type": "string" },
+        "image": { "type": "string", "format": "uri" },
+        "status": { "type": "string", "enum": ["online", "offline", "maintenance"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "ip", "maxPlayers", "gamemode", "status", "createdAt"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "Global chat message",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string" },
+        "faction": { "type": "string" },
+        "channel": { "type": "string", "description": "global or faction name" },
+        "chatColor": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "uid", "displayName", "channel", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notifications",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "title", "body", "read", "createdAt"]
+    },
+    "AppConfig": {
+      "title": "App Configuration",
+      "description": "Global launcher settings",
+      "type": "object",
+      "properties": {
+        "latestVersion": { "type": "string" },
+        "updateUrl": { "type": "string", "format": "uri" },
+        "maintenanceMode": { "type": "boolean" }
+      },
+      "required": ["latestVersion"]
+    }
+  },
+  "firestore": {
+    "/appConfig/main": {
+      "schema": { "$ref": "#/entities/AppConfig" },
+      "description": "Main app configuration"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "User notifications"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/news/{newsId}": {
+      "schema": { "$ref": "#/entities/News" },
+      "description": "News articles"
+    },
+    "/mods/{modId}": {
+      "schema": { "$ref": "#/entities/Mod" },
+      "description": "Available mods"
+    },
+    "/shop/{itemId}": {
+      "schema": { "$ref": "#/entities/ShopItem" },
+      "description": "Shop items"
+    },
+    "/servers/{serverId}": {
+      "schema": { "$ref": "#/entities/Server" },
+      "description": "Server listings"
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Global chat messages"
+    }
+  }
+}
